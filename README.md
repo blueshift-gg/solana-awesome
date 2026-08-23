@@ -46,7 +46,7 @@ No features are enabled by default.
 | `account` | `solana-account` |
 | `commitment-config` | `solana-commitment-config` |
 | `native-token` | `solana-native-token` |
-| `system-interface` | `solana-system-interface` (with `bincode`, so instruction builders work) |
+| `system-interface` | `solana-system-interface` (with `wincode`, so instruction builders work) |
 | `compute-budget-interface` | `solana-compute-budget-interface` |
 
 ### Umbrella crates
@@ -78,14 +78,62 @@ No features are enabled by default.
 | `clients` | all Client features above |
 | `full` | `core` + `clients` + `program` |
 
+### Pass-through features
+
+These forward a feature of the same name to the underlying crates. They are
+*weak*: each one applies only to the crates you have already enabled and never
+pulls a crate in by itself. So `features = ["core", "serde"]` enables serde on
+every core crate, while `serde` alone enables nothing.
+
+```toml
+[dependencies]
+solana-awesome = { version = "0.1", features = ["pubkey", "transaction", "serde"] }
+```
+
+| Feature | Forwards to |
+|---|---|
+| `serde` | `account`, `commitment-config`, `compute-budget-interface`, `hash`, `instruction`, `message`, `pubkey`, `signature`, `system-interface`, `transaction` |
+| `borsh` | `compute-budget-interface`, `hash`, `instruction`, `program`, `pubkey` |
+| `wincode` | `account`, `hash`, `instruction`, `message`, `pubkey`, `signature`, `system-interface`, `transaction` |
+| `bytemuck` | `hash`, `pubkey`, `signature` |
+| `rand` | `pubkey`, `signature` |
+| `blake3` | `message`, `transaction` |
+| `verify` | `signature`, `transaction` |
+| `curve25519` | `pubkey` |
+| `sha2` | `pubkey` |
+| `seed-derivable` | `keypair` |
+| `atomic` | `hash` |
+| `decode` | `hash` |
+| `sanitize` | `hash` |
+| `copy` | `hash` |
+| `syscalls` | `instruction` |
+| `agave-unstable-api` | all client crates |
+
+Not forwarded: `bincode` (legacy — upstream is migrating serialization to
+`wincode`, which is forwarded instead), `frozen-abi` and
+`dev-context-only-utils` (internal Agave tooling), `std`/`alloc` (on by
+default upstream), and `spinner` (on by default in `solana-rpc-client` /
+`solana-tpu-client`). Features that only exist in later minors than our
+minimum requirements (`solana-signature`'s `batch-verify` / `parallel`, added
+in 3.4; `solana-hash`'s `rand`, added in 4.5) are also not forwarded — they
+could break a build that unifies down to an earlier minor. If you need any of
+these, depend on the underlying crate directly with the feature enabled;
+cargo will unify it with the copy this crate uses.
+
 ## Version pinning notes
 
-- Core crates use major-only requirements (`"3"` / `"4"`) so cargo can unify
-  them with the exact minor versions the Agave client crates pin.
-- Client crates are pinned to `"4.2"`: letting them float down to 4.1.x pulls
-  in `wincode 0.5` alongside the `wincode 0.6` used by the current core
-  crates, which fails to compile. Keep the whole client group on the same
-  minor version when bumping.
+- Core crates use loose requirements (`"3"` / `"4"`) so cargo can unify them
+  with the exact minor versions the Agave client crates pin. Where a minor is
+  given (`"4.1"` / `"3.2"`), it is the first release of that major carrying
+  the `wincode` feature — upstream is migrating serialization from bincode to
+  wincode, and the `wincode` pass-through must exist in every version the
+  requirement can resolve to.
+- Client crates are pinned to `"4.2"` so the whole group resolves together:
+  when core and client versions drift apart, the tree splits across two
+  incompatible `wincode` 0.x majors, which fails to compile. Keep the client
+  group on the same minor when bumping, and check that
+  `cargo tree -i wincode` shows a single version under the solana crates
+  (the `wincode` dev-dependency must match it too).
 
 ## Adding a new crate
 
@@ -96,7 +144,13 @@ No features are enabled by default.
    `#[cfg(feature = "<name>")] pub use solana_<name> as <name>;`
 4. Add it to the `core`/`clients` group if it belongs there, and to the table
    above.
-5. `cargo check --features full` and `cargo test --features full`.
+5. Forward its useful features in the pass-through section of `[features]`
+   using the weak syntax (`"solana-<name>?/<feature>"`), and update the
+   pass-through table above. Only forward a feature if every version the
+   requirement can resolve to has it — with major-only requirements that
+   means it must exist in the earliest minor of that major.
+6. `cargo check --features full` and `cargo test --all-features` (the latter
+   also exercises every pass-through feature).
 
 ## Keeping it current
 
@@ -117,7 +171,7 @@ Releases are manual:
 
 1. Make sure the version in `Cargo.toml` was bumped (patch for dependency
    requirement updates, minor for new features).
-2. `cargo test --features full`
+2. `cargo test --all-features`
 3. `cargo publish --dry-run`
 4. `cargo publish`
 5. `git tag v<version> && git push --tags`

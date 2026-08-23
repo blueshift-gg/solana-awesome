@@ -11,20 +11,20 @@ exclude = ["scripts/", ".claude/"]
 
 [dependencies]
 # --- Core SDK crates ---
-# Major-version-only requirements so cargo can unify these with the exact
-# minor versions pinned by the client crates below.
-solana-account = { version = "4", optional = true }
+# Loose requirements so cargo can unify these with the exact minor versions
+# pinned by the client crates below.
+solana-account = { version = "4.1", optional = true }
 solana-commitment-config = { version = "3", optional = true }
 solana-compute-budget-interface = { version = "3", optional = true }
-solana-hash = { version = "4", optional = true }
-solana-instruction = { version = "3", optional = true }
+solana-hash = { version = "4.1", optional = true }
+solana-instruction = { version = "3.2", optional = true }
 solana-keypair = { version = "3", optional = true }
 solana-message = { version = "4", optional = true }
 solana-native-token = { version = "3", optional = true }
-solana-pubkey = { version = "4", optional = true }
-solana-signature = { version = "3", optional = true }
+solana-pubkey = { version = "4.1", optional = true }
+solana-signature = { version = "3.2", optional = true }
 solana-signer = { version = "3", optional = true }
-solana-system-interface = { version = "3", optional = true, features = ["bincode"] }
+solana-system-interface = { version = "3.1", optional = true, features = ["wincode"] }
 solana-transaction = { version = "4", optional = true }
 
 # --- Umbrella crates ---
@@ -41,6 +41,15 @@ solana-rpc-client-api = { version = "4.2", optional = true }
 solana-tpu-client = { version = "4.2", optional = true }
 solana-transaction-status = { version = "4.2", optional = true }
 solana-udp-client = { version = "4.2", optional = true }
+
+[dev-dependencies]
+serde_json = "1"
+borsh = "1"
+bytemuck = "1"
+# Must stay on the same 0.x the core crates use (check `cargo tree -i wincode`
+# when bumping) — 0.x majors are incompatible, and the round-trip test needs
+# the same trait impls the solana crates derive against.
+wincode = "0.5"
 
 [features]
 default = []
@@ -74,6 +83,72 @@ connection-cache = ["dep:solana-connection-cache"]
 pubsub-client = ["dep:solana-pubsub-client"]
 transaction-status = ["dep:solana-transaction-status"]
 account-decoder = ["dep:solana-account-decoder"]
+
+# --- Pass-through features ---
+# Weak (`?/`) forwards of upstream crate features: each one applies only to
+# the crates you have already enabled, and never pulls a crate in by itself.
+# `features = ["core", "serde"]` gives you serde support on every enabled
+# core crate; `serde` alone enables nothing.
+serde = [
+    "solana-account?/serde",
+    "solana-commitment-config?/serde",
+    "solana-compute-budget-interface?/serde",
+    "solana-hash?/serde",
+    "solana-instruction?/serde",
+    "solana-message?/serde",
+    "solana-pubkey?/serde",
+    "solana-signature?/serde",
+    "solana-system-interface?/serde",
+    "solana-transaction?/serde",
+]
+borsh = [
+    "solana-compute-budget-interface?/borsh",
+    "solana-hash?/borsh",
+    "solana-instruction?/borsh",
+    "solana-program?/borsh",
+    "solana-pubkey?/borsh",
+]
+# No bincode forward: upstream is migrating serialization from bincode to
+# wincode, so only wincode is exposed here. If you need a crate's legacy
+# bincode feature, depend on that crate directly and enable it there.
+wincode = [
+    "solana-account?/wincode",
+    "solana-hash?/wincode",
+    "solana-instruction?/wincode",
+    "solana-message?/wincode",
+    "solana-pubkey?/wincode",
+    "solana-signature?/wincode",
+    "solana-system-interface?/wincode",
+    "solana-transaction?/wincode",
+]
+bytemuck = [
+    "solana-hash?/bytemuck",
+    "solana-pubkey?/bytemuck",
+    "solana-signature?/bytemuck",
+]
+rand = ["solana-pubkey?/rand", "solana-signature?/rand"]
+blake3 = ["solana-message?/blake3", "solana-transaction?/blake3"]
+verify = ["solana-signature?/verify", "solana-transaction?/verify"]
+curve25519 = ["solana-pubkey?/curve25519"]
+sha2 = ["solana-pubkey?/sha2"]
+seed-derivable = ["solana-keypair?/seed-derivable"]
+atomic = ["solana-hash?/atomic"]
+decode = ["solana-hash?/decode"]
+sanitize = ["solana-hash?/sanitize"]
+copy = ["solana-hash?/copy"]
+syscalls = ["solana-instruction?/syscalls"]
+agave-unstable-api = [
+    "solana-account-decoder?/agave-unstable-api",
+    "solana-client?/agave-unstable-api",
+    "solana-connection-cache?/agave-unstable-api",
+    "solana-pubsub-client?/agave-unstable-api",
+    "solana-quic-client?/agave-unstable-api",
+    "solana-rpc-client?/agave-unstable-api",
+    "solana-rpc-client-api?/agave-unstable-api",
+    "solana-tpu-client?/agave-unstable-api",
+    "solana-transaction-status?/agave-unstable-api",
+    "solana-udp-client?/agave-unstable-api",
+]
 
 # --- Groups ---
 core = [

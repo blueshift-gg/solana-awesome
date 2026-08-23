@@ -11,6 +11,16 @@
 //! Or grab a group: `core` (all SDK primitives), `clients` (all client
 //! crates), or `full` (everything).
 //!
+//! Upstream crate features (`serde`, `borsh`, `verify`, `rand`, ...) are
+//! forwarded as weak pass-through features of the same name: they apply to
+//! whichever enabled crates support them and never pull a crate in by
+//! themselves.
+//!
+//! ```toml
+//! [dependencies]
+//! solana-awesome = { version = "0.1", features = ["core", "serde"] }
+//! ```
+//!
 //! ```ignore
 //! use solana_awesome::pubkey::Pubkey;
 //! use solana_awesome::rpc_client::rpc_client::RpcClient;
