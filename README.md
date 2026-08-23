@@ -154,23 +154,39 @@ cargo will unify it with the copy this crate uses.
 
 ## Keeping it current
 
-`scripts/check_crates.py` reports (read-only) what crates.io has that this
-crate doesn't: version bumps for existing dependencies, and new `solana-*`
-crates published by the trusted owners of `solana-pubkey` (so name-squatters
-never appear). Crates rejected for inclusion are recorded in
-`scripts/crates-denylist.txt` so they aren't re-surfaced.
+`scripts/check_crates.py` reports (read-only) new `solana-*` crates this
+crate doesn't re-export yet, published by the trusted owners of
+`solana-pubkey` (so name-squatters never appear). Crates rejected for
+inclusion are recorded in `scripts/crates-denylist.txt` so they aren't
+re-surfaced. Version bumps for existing dependencies are handled by
+`scripts/bump_requirements.py` instead (see below).
 
 The `/update-crates` skill (`.claude/skills/update-crates/`) runs the script,
 curates the candidates, wires accepted crates through `Cargo.toml`,
 `src/lib.rs`, this README, and the smoke tests, then validates with
 `cargo test --features full`.
 
+A daily GitHub Actions job (`.github/workflows/daily-deps.yml`, also runnable
+manually from the Actions tab) keeps the crate caught up with upstream:
+`scripts/bump_requirements.py` raises each `solana-*` requirement to the
+highest published `major.minor` that still resolves against the rest of the
+tree (bumps blocked by other crates' internal pins are held back and listed),
+bumps the package version (patch, or minor when a dependency changed major),
+validates the full feature matrix (`--all-features`, `full`-only, and
+no-features builds, a single-wincode tree check, and `cargo publish
+--dry-run`), and opens a PR with the diff. Merging it and running the release
+steps below publishes a solana-awesome that tracks the latest solana crates.
+If the bump breaks the build or tests, the job files/updates an issue
+instead. New crates still go through `/update-crates`; the job prints the
+`check_crates.py` report in its run summary as a reminder.
+
 ## Release
 
 Releases are manual:
 
 1. Make sure the version in `Cargo.toml` was bumped (patch for dependency
-   requirement updates, minor for new features).
+   requirement updates, minor for new features or a dependency major bump —
+   the daily catch-up PRs already include the right bump).
 2. `cargo test --all-features`
 3. `cargo publish --dry-run`
 4. `cargo publish`

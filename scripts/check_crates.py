@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""Report crates.io state for solana-awesome: available version bumps for
-existing dependencies, and new solana-* crates we don't re-export yet.
+"""Report new solana-* crates that solana-awesome doesn't re-export yet.
+
+(Version bumps for existing dependencies are handled separately and
+automatically by scripts/bump_requirements.py.)
 
 Read-only: prints a markdown report to stdout and never edits the repo.
 The /update-crates skill consumes this report and applies changes.
@@ -70,24 +72,6 @@ def load_denylist() -> set[str]:
     return names
 
 
-def req_covers(req: str, version: str) -> bool:
-    """True if the latest version still matches the manifest's caret-style
-    requirement prefix, e.g. req "4" covers "4.3.1" but not "5.0.0"."""
-    req_parts = req.split(".")
-    ver_parts = version.split(".")
-    return ver_parts[: len(req_parts)] == req_parts
-
-
-def check_bumps(deps: dict[str, str]) -> list[dict[str, str]]:
-    bumps = []
-    for name, req in sorted(deps.items()):
-        info = get(f"/crates/{name}")["crate"]
-        latest = info.get("max_stable_version") or info["max_version"]
-        if not req_covers(req, latest):
-            bumps.append({"name": name, "req": req, "latest": latest})
-    return bumps
-
-
 def trusted_owners() -> tuple[list[dict], list[dict]]:
     users = get(f"/crates/{TRUST_ANCHOR}/owner_user").get("users", [])
     teams = get(f"/crates/{TRUST_ANCHOR}/owner_team").get("teams", [])
@@ -125,17 +109,6 @@ def main() -> None:
     ).strftime("%Y-%m-%d")
 
     print("# solana-awesome crates.io report\n")
-
-    bumps = check_bumps(deps)
-    print("## Version bumps available\n")
-    if bumps:
-        print("| Crate | Manifest req | Latest stable |")
-        print("|---|---|---|")
-        for b in bumps:
-            print(f"| `{b['name']}` | `{b['req']}` | `{b['latest']}` |")
-    else:
-        print(f"None — all {len(deps)} dependency requirements cover the latest stable versions.")
-    print()
 
     users, teams = trusted_owners()
     owner_names = [u["login"] for u in users] + [t["login"] for t in teams]

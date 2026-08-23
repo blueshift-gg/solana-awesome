@@ -1,32 +1,32 @@
 ---
 name: update-crates
-description: Check crates.io for new solana-* crates and version bumps, curate and apply them to solana-awesome, validate, and prep (but not perform) a release.
+description: Check crates.io for new solana-* crates, curate and wire them into solana-awesome, validate, and prep (but not perform) a release. Version bumps of existing deps are automated by the daily-deps workflow.
 ---
 
 # Update solana-awesome from crates.io
 
 You are maintaining an umbrella crate that re-exports Solana ecosystem crates
-behind feature flags. Keep it current in two ways: bump version requirements
-of existing dependencies, and add newly published crates that belong here.
+behind feature flags. Version requirement bumps of existing dependencies are
+automated (`scripts/bump_requirements.py`, run daily by
+`.github/workflows/daily-deps.yml`, which opens catch-up PRs) — this skill's
+job is the part that needs judgment: curating and wiring in **new** crates.
 
 ## 1. Gather the report
 
 Run `python3 scripts/check_crates.py` from the repo root (read-only; takes a
-few minutes because it rate-limits crates.io requests). It reports available
-version bumps and new trusted-owner candidates, already filtered against
+few minutes because it rate-limits crates.io requests). It reports new
+trusted-owner candidates, already filtered against
 `scripts/crates-denylist.txt` and staleness/placeholder heuristics.
 
-## 2. Apply version bumps
+## 2. Requirement philosophy (for the crates you add)
 
-Requirement philosophy in `Cargo.toml`:
-- Core SDK crates use **major-only** requirements (`"4"`) so cargo can unify
-  them with whatever the client crates pin.
-- Client crates (the `solana-client`/`solana-rpc-client` family) use
-  **major.minor** (`"4.2"`) and must move together to the same minor.
-
-For each reported bump, widen or advance the requirement accordingly. A new
-major version of a dependency may change its API — check the smoke tests
-still compile and adjust imports if the crate moved types around.
+- Every requirement is **major.minor**, tracking the highest published floor
+  that still resolves against the rest of the tree — the daily job keeps
+  these current, so for a new crate just start at the latest `major.minor`
+  that resolves.
+- Client crates (the `solana-client`/`solana-rpc-client` family) must move
+  together on the same minor, and core and client crates must agree on one
+  `wincode` 0.x (see README version pinning notes).
 
 ## 3. Curate new candidates
 
@@ -47,29 +47,37 @@ next run's report short.
 ## 4. Wire in each accepted crate
 
 For a crate `solana-foo-bar`:
-1. `Cargo.toml` dependencies: `solana-foo-bar = { version = "N", optional = true }`
-   in the matching section (major-only unless it must lockstep with clients).
-   Keep the section sorted alphabetically.
+1. `Cargo.toml` dependencies: `solana-foo-bar = { version = "N.M", optional = true }`
+   in the matching section. Keep the section sorted alphabetically.
 2. `Cargo.toml` features: `foo-bar = ["dep:solana-foo-bar"]`, and add
    `foo-bar` to the right group feature (`core`, `clients`, or a new group if
    a genuinely new category emerges — remember `full` must cover all groups).
-3. `src/lib.rs`: `#[cfg(feature = "foo-bar")] pub use solana_foo_bar as foo_bar;`
+3. Forward its useful features in the pass-through section of `[features]`
+   using the weak syntax (`"solana-foo-bar?/<feature>"`), following the
+   README's pass-through rules (only features present in every version the
+   requirement can resolve to; no `bincode` — the ecosystem is migrating to
+   `wincode`).
+4. `src/lib.rs`: `#[cfg(feature = "foo-bar")] pub use solana_foo_bar as foo_bar;`
    under the matching section comment.
-4. `README.md`: add a row to the matching feature table.
-5. `tests/smoke.rs`: add a feature-gated test when there's an obvious cheap
+5. `README.md`: add a row to the matching feature table (and the pass-through
+   table if features were forwarded).
+6. `tests/smoke.rs`: add a feature-gated test when there's an obvious cheap
    assertion (construct a type, check a constant or program ID). Skip if a
    meaningful test would need a network or validator.
 
 ## 5. Validate
 
 ```
-cargo update
+cargo test --all-features
 cargo test --features full
+cargo check --no-default-features
 cargo doc --features full --no-deps
 ```
 
 Also spot-check that a single lone feature compiles, e.g.
-`cargo check --no-default-features --features foo-bar` for one new crate.
+`cargo check --no-default-features --features foo-bar` for one new crate, and
+that `cargo tree --all-features | grep wincode` shows a single wincode
+version.
 
 ## 6. Version and summarize
 

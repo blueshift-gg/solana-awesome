@@ -1,6 +1,6 @@
 [package]
 name = "solana-awesome"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "A single crate that collects the Solana ecosystem crates and exposes each one behind a feature flag."
 license = "Apache-2.0"
@@ -13,19 +13,19 @@ exclude = ["scripts/", ".claude/"]
 # --- Core SDK crates ---
 # Loose requirements so cargo can unify these with the exact minor versions
 # pinned by the client crates below.
-solana-account = { version = "4.1", optional = true }
-solana-commitment-config = { version = "3", optional = true }
+solana-account = { version = "4.3", optional = true }
+solana-commitment-config = { version = "3.1", optional = true }
 solana-compute-budget-interface = { version = "3", optional = true }
-solana-hash = { version = "4.1", optional = true }
-solana-instruction = { version = "3.2", optional = true }
-solana-keypair = { version = "3", optional = true }
-solana-message = { version = "4", optional = true }
+solana-hash = { version = "4.5", optional = true }
+solana-instruction = { version = "3.4", optional = true }
+solana-keypair = { version = "3.1", optional = true }
+solana-message = { version = "4.4", optional = true }
 solana-native-token = { version = "3", optional = true }
-solana-pubkey = { version = "4.1", optional = true }
-solana-signature = { version = "3.2", optional = true }
+solana-pubkey = { version = "4.2", optional = true }
+solana-signature = { version = "3.4", optional = true }
 solana-signer = { version = "3", optional = true }
-solana-system-interface = { version = "3.1", optional = true, features = ["wincode"] }
-solana-transaction = { version = "4", optional = true }
+solana-system-interface = { version = "3.2", optional = true, features = ["wincode"] }
+solana-transaction = { version = "4.1", optional = true }
 
 # --- Umbrella crates ---
 solana-program = { version = "4", optional = true }
