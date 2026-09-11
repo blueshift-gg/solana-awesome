@@ -50,8 +50,11 @@ For a crate `solana-foo-bar`:
 1. `Cargo.toml` dependencies: `solana-foo-bar = { version = "N.M", optional = true }`
    in the matching section. Keep the section sorted alphabetically.
 2. `Cargo.toml` features: `foo-bar = ["dep:solana-foo-bar"]`, and add
-   `foo-bar` to the right group feature (`core`, `clients`, or a new group if
-   a genuinely new category emerges — remember `full` must cover all groups).
+   `foo-bar` to the right group feature (`core`, `clients`, `onchain`,
+   `interfaces`, or a new group if a genuinely new category emerges —
+   remember `full` must cover all groups). If the crate name collides with a
+   pass-through feature, name the feature something else and say so in the
+   README (see `borsh-utils` for `solana-borsh`).
 3. Forward its useful features in the pass-through section of `[features]`
    using the weak syntax (`"solana-foo-bar?/<feature>"`), following the
    README's pass-through rules (only features present in every version the
@@ -78,6 +81,12 @@ Also spot-check that a single lone feature compiles, e.g.
 `cargo check --no-default-features --features foo-bar` for one new crate, and
 that `cargo tree --all-features | grep wincode` shows a single wincode
 version.
+
+A forward can split the tree even when the crate itself resolves fine: a
+crate that has moved ahead to a newer `wincode` 0.x only pulls it in once
+the `wincode` feature is on. After adding forwards, re-check the wincode
+count and compare `cargo metadata --all-features` duplicate counts against
+the previous manifest — they should not grow.
 
 ## 6. Version and summarize
 

@@ -1,6 +1,6 @@
 [package]
 name = "solana-awesome"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 description = "A single crate that collects the Solana ecosystem crates and exposes each one behind a feature flag."
 license = "Apache-2.0"
@@ -8,6 +8,11 @@ repository = "https://github.com/Nagaprasadvr/solana-awesome"
 keywords = ["solana", "sdk", "blockchain"]
 categories = ["cryptography::cryptocurrencies", "api-bindings"]
 exclude = ["scripts/", ".claude/"]
+
+# docs.rs builds every feature so the flag badges on each re-export are right.
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [dependencies]
 # --- Core SDK crates ---
@@ -26,6 +31,55 @@ solana-signature = { version = "3.4", optional = true }
 solana-signer = { version = "3", optional = true }
 solana-system-interface = { version = "3.2", optional = true, features = ["wincode"] }
 solana-transaction = { version = "4.1", optional = true }
+
+# --- On-chain program crates ---
+# The program-side primitives: sysvars, hashers, entrypoint/CPI scaffolding.
+# The sysvar-data crates enable their own `sysvar` feature (the `SysvarId` /
+# `Sysvar` impls) because that is what makes them usable from a program, and
+# `sysvar` is already taken here as the feature name of `solana-sysvar`.
+solana-account-info = { version = "3.1", optional = true }
+solana-big-mod-exp = { version = "3.0", optional = true }
+solana-blake3-hasher = { version = "3.1", optional = true }
+solana-borsh = { version = "3.0", optional = true }
+solana-clock = { version = "3.1", optional = true, features = ["sysvar"] }
+solana-cpi = { version = "3.1", optional = true }
+solana-define-syscall = { version = "5.2", optional = true }
+solana-epoch-rewards = { version = "3.1", optional = true, features = ["sysvar"] }
+solana-epoch-schedule = { version = "3.2", optional = true, features = ["sysvar"] }
+solana-epoch-stake = { version = "3.0", optional = true }
+solana-fee-calculator = { version = "3.2", optional = true }
+solana-instruction-error = { version = "2.5", optional = true }
+solana-instructions-sysvar = { version = "4.0", optional = true }
+solana-keccak-hasher = { version = "3.1", optional = true }
+solana-last-restart-slot = { version = "3.1", optional = true, features = ["sysvar"] }
+solana-msg = { version = "3.1", optional = true }
+solana-program-entrypoint = { version = "3.1", optional = true }
+solana-program-error = { version = "3.0", optional = true }
+solana-program-memory = { version = "3.1", optional = true }
+solana-program-option = { version = "3.1", optional = true }
+solana-program-pack = { version = "3.1", optional = true }
+solana-rent = { version = "4.3", optional = true, features = ["sysvar"] }
+solana-sdk-ids = { version = "3.1", optional = true }
+solana-secp256k1-recover = { version = "3.3", optional = true }
+solana-serde-varint = { version = "3.0", optional = true }
+solana-serialize-utils = { version = "3.1", optional = true }
+solana-sha256-hasher = { version = "3.1", optional = true }
+solana-short-vec = { version = "3.2", optional = true }
+solana-slot-hashes = { version = "3.1", optional = true, features = ["sysvar"] }
+solana-slot-history = { version = "3.1", optional = true, features = ["sysvar"] }
+solana-stable-layout = { version = "3.0", optional = true }
+solana-sysvar = { version = "4.1", optional = true }
+solana-sysvar-id = { version = "3.1", optional = true }
+
+# --- Program interface crates ---
+# `solana-system-interface` and `solana-compute-budget-interface` are part of
+# this family too, but stay in the core section above: they are as common in
+# off-chain transaction building as they are on-chain.
+solana-address-lookup-table-interface = { version = "3.1", optional = true }
+solana-feature-gate-interface = { version = "4.0", optional = true }
+solana-loader-v3-interface = { version = "7.0", optional = true }
+solana-stake-interface = { version = "4.3", optional = true }
+solana-vote-interface = { version = "6.0", optional = true }
 
 # --- Umbrella crates ---
 solana-program = { version = "4", optional = true }
@@ -69,6 +123,49 @@ native-token = ["dep:solana-native-token"]
 system-interface = ["dep:solana-system-interface"]
 compute-budget-interface = ["dep:solana-compute-budget-interface"]
 
+# --- On-chain program crates ---
+account-info = ["dep:solana-account-info"]
+big-mod-exp = ["dep:solana-big-mod-exp"]
+blake3-hasher = ["dep:solana-blake3-hasher"]
+# Not `borsh`: that name is taken by the borsh pass-through below.
+borsh-utils = ["dep:solana-borsh"]
+clock = ["dep:solana-clock"]
+cpi = ["dep:solana-cpi"]
+define-syscall = ["dep:solana-define-syscall"]
+epoch-rewards = ["dep:solana-epoch-rewards"]
+epoch-schedule = ["dep:solana-epoch-schedule"]
+epoch-stake = ["dep:solana-epoch-stake"]
+fee-calculator = ["dep:solana-fee-calculator"]
+instruction-error = ["dep:solana-instruction-error"]
+instructions-sysvar = ["dep:solana-instructions-sysvar"]
+keccak-hasher = ["dep:solana-keccak-hasher"]
+last-restart-slot = ["dep:solana-last-restart-slot"]
+msg = ["dep:solana-msg"]
+program-entrypoint = ["dep:solana-program-entrypoint"]
+program-error = ["dep:solana-program-error"]
+program-memory = ["dep:solana-program-memory"]
+program-option = ["dep:solana-program-option"]
+program-pack = ["dep:solana-program-pack"]
+rent = ["dep:solana-rent"]
+sdk-ids = ["dep:solana-sdk-ids"]
+secp256k1-recover = ["dep:solana-secp256k1-recover"]
+serde-varint = ["dep:solana-serde-varint"]
+serialize-utils = ["dep:solana-serialize-utils"]
+sha256-hasher = ["dep:solana-sha256-hasher"]
+short-vec = ["dep:solana-short-vec"]
+slot-hashes = ["dep:solana-slot-hashes"]
+slot-history = ["dep:solana-slot-history"]
+stable-layout = ["dep:solana-stable-layout"]
+sysvar = ["dep:solana-sysvar"]
+sysvar-id = ["dep:solana-sysvar-id"]
+
+# --- Program interfaces ---
+address-lookup-table-interface = ["dep:solana-address-lookup-table-interface"]
+feature-gate-interface = ["dep:solana-feature-gate-interface"]
+loader-v3-interface = ["dep:solana-loader-v3-interface"]
+stake-interface = ["dep:solana-stake-interface"]
+vote-interface = ["dep:solana-vote-interface"]
+
 # --- Umbrellas ---
 program = ["dep:solana-program"]
 
@@ -91,46 +188,90 @@ account-decoder = ["dep:solana-account-decoder"]
 # core crate; `serde` alone enables nothing.
 serde = [
     "solana-account?/serde",
+    "solana-address-lookup-table-interface?/serde",
+    "solana-clock?/serde",
     "solana-commitment-config?/serde",
     "solana-compute-budget-interface?/serde",
+    "solana-epoch-rewards?/serde",
+    "solana-epoch-schedule?/serde",
+    "solana-feature-gate-interface?/serde",
+    "solana-fee-calculator?/serde",
     "solana-hash?/serde",
+    "solana-instruction-error?/serde",
     "solana-instruction?/serde",
+    "solana-last-restart-slot?/serde",
+    "solana-loader-v3-interface?/serde",
     "solana-message?/serde",
+    "solana-program-error?/serde",
     "solana-pubkey?/serde",
+    "solana-rent?/serde",
+    "solana-short-vec?/serde",
     "solana-signature?/serde",
+    "solana-slot-hashes?/serde",
+    "solana-slot-history?/serde",
+    "solana-stake-interface?/serde",
     "solana-system-interface?/serde",
+    "solana-sysvar?/serde",
     "solana-transaction?/serde",
+    "solana-vote-interface?/serde",
 ]
 borsh = [
     "solana-compute-budget-interface?/borsh",
     "solana-hash?/borsh",
     "solana-instruction?/borsh",
+    "solana-program-error?/borsh",
     "solana-program?/borsh",
     "solana-pubkey?/borsh",
+    "solana-secp256k1-recover?/borsh",
+    "solana-stake-interface?/borsh",
 ]
 # No bincode forward: upstream is migrating serialization from bincode to
 # wincode, so only wincode is exposed here. If you need a crate's legacy
 # bincode feature, depend on that crate directly and enable it there.
+# `solana-instruction-error` is deliberately absent: it moved to wincode 0.6
+# ahead of the rest of the tree, so forwarding it here would resolve two
+# incompatible wincode 0.x majors at once.
 wincode = [
     "solana-account?/wincode",
+    "solana-address-lookup-table-interface?/wincode",
+    "solana-clock?/wincode",
+    "solana-epoch-rewards?/wincode",
+    "solana-epoch-schedule?/wincode",
+    "solana-fee-calculator?/wincode",
     "solana-hash?/wincode",
     "solana-instruction?/wincode",
+    "solana-last-restart-slot?/wincode",
     "solana-message?/wincode",
     "solana-pubkey?/wincode",
+    "solana-rent?/wincode",
     "solana-signature?/wincode",
+    "solana-slot-hashes?/wincode",
+    "solana-slot-history?/wincode",
+    "solana-stake-interface?/wincode",
     "solana-system-interface?/wincode",
+    "solana-sysvar?/wincode",
     "solana-transaction?/wincode",
 ]
 bytemuck = [
+    "solana-address-lookup-table-interface?/bytemuck",
     "solana-hash?/bytemuck",
     "solana-pubkey?/bytemuck",
     "solana-signature?/bytemuck",
+    "solana-sysvar?/bytemuck",
 ]
 rand = ["solana-pubkey?/rand", "solana-signature?/rand"]
-blake3 = ["solana-message?/blake3", "solana-transaction?/blake3"]
+blake3 = [
+    "solana-blake3-hasher?/blake3",
+    "solana-message?/blake3",
+    "solana-transaction?/blake3",
+]
 verify = ["solana-signature?/verify", "solana-transaction?/verify"]
 curve25519 = ["solana-pubkey?/curve25519"]
-sha2 = ["solana-pubkey?/sha2"]
+sha2 = ["solana-pubkey?/sha2", "solana-sha256-hasher?/sha2"]
+sha3 = ["solana-keccak-hasher?/sha3"]
+num-traits = ["solana-instruction-error?/num-traits"]
+nullable = ["solana-program-option?/nullable"]
+unstable-static-syscalls = ["solana-define-syscall?/unstable-static-syscalls"]
 seed-derivable = ["solana-keypair?/seed-derivable"]
 atomic = ["solana-hash?/atomic"]
 decode = ["solana-hash?/decode"]
@@ -178,4 +319,48 @@ clients = [
     "transaction-status",
     "account-decoder",
 ]
-full = ["core", "clients", "program"]
+onchain = [
+    "account-info",
+    "big-mod-exp",
+    "blake3-hasher",
+    "borsh-utils",
+    "clock",
+    "cpi",
+    "define-syscall",
+    "epoch-rewards",
+    "epoch-schedule",
+    "epoch-stake",
+    "fee-calculator",
+    "instruction-error",
+    "instructions-sysvar",
+    "keccak-hasher",
+    "last-restart-slot",
+    "msg",
+    "program-entrypoint",
+    "program-error",
+    "program-memory",
+    "program-option",
+    "program-pack",
+    "rent",
+    "sdk-ids",
+    "secp256k1-recover",
+    "serde-varint",
+    "serialize-utils",
+    "sha256-hasher",
+    "short-vec",
+    "slot-hashes",
+    "slot-history",
+    "stable-layout",
+    "sysvar",
+    "sysvar-id",
+]
+interfaces = [
+    "address-lookup-table-interface",
+    "compute-budget-interface",
+    "feature-gate-interface",
+    "loader-v3-interface",
+    "stake-interface",
+    "system-interface",
+    "vote-interface",
+]
+full = ["core", "clients", "onchain", "interfaces", "program"]

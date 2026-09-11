@@ -9,7 +9,7 @@ and turn on only what you need.
 
 ```toml
 [dependencies]
-solana-awesome = { version = "0.1", features = ["pubkey", "keypair", "signer", "rpc-client"] }
+solana-awesome = { version = "0.2", features = ["pubkey", "keypair", "signer", "rpc-client"] }
 ```
 
 ```rust
@@ -55,6 +55,64 @@ No features are enabled by default.
 |---|---|
 | `program` | `solana-program` |
 
+### On-chain program crates
+
+The program-side primitives, migrated from `solana-onchain`. All of them are
+`no_std`-friendly.
+
+| Feature | Crate |
+|---|---|
+| `account-info` | `solana-account-info` |
+| `big-mod-exp` | `solana-big-mod-exp` |
+| `blake3-hasher` | `solana-blake3-hasher` |
+| `borsh-utils` | `solana-borsh` (named `borsh-utils` so it doesn't clash with the `borsh` pass-through; the module is `borsh_utils`) |
+| `clock` | `solana-clock` (with `sysvar`) |
+| `cpi` | `solana-cpi` |
+| `define-syscall` | `solana-define-syscall` |
+| `epoch-rewards` | `solana-epoch-rewards` (with `sysvar`) |
+| `epoch-schedule` | `solana-epoch-schedule` (with `sysvar`) |
+| `epoch-stake` | `solana-epoch-stake` |
+| `fee-calculator` | `solana-fee-calculator` |
+| `instruction-error` | `solana-instruction-error` |
+| `instructions-sysvar` | `solana-instructions-sysvar` |
+| `keccak-hasher` | `solana-keccak-hasher` |
+| `last-restart-slot` | `solana-last-restart-slot` (with `sysvar`) |
+| `msg` | `solana-msg` |
+| `program-entrypoint` | `solana-program-entrypoint` |
+| `program-error` | `solana-program-error` |
+| `program-memory` | `solana-program-memory` |
+| `program-option` | `solana-program-option` |
+| `program-pack` | `solana-program-pack` |
+| `rent` | `solana-rent` (with `sysvar`) |
+| `sdk-ids` | `solana-sdk-ids` |
+| `secp256k1-recover` | `solana-secp256k1-recover` |
+| `serde-varint` | `solana-serde-varint` |
+| `serialize-utils` | `solana-serialize-utils` |
+| `sha256-hasher` | `solana-sha256-hasher` |
+| `short-vec` | `solana-short-vec` |
+| `slot-hashes` | `solana-slot-hashes` (with `sysvar`) |
+| `slot-history` | `solana-slot-history` (with `sysvar`) |
+| `stable-layout` | `solana-stable-layout` |
+| `sysvar` | `solana-sysvar` |
+| `sysvar-id` | `solana-sysvar-id` |
+
+The sysvar-data crates above enable their upstream `sysvar` feature (the
+`SysvarId` / `Sysvar` impls) rather than exposing it as a pass-through: it is
+what makes them usable from a program, and the `sysvar` feature name here
+already belongs to `solana-sysvar`.
+
+### Program interfaces
+
+| Feature | Crate |
+|---|---|
+| `address-lookup-table-interface` | `solana-address-lookup-table-interface` |
+| `compute-budget-interface` | `solana-compute-budget-interface` |
+| `feature-gate-interface` | `solana-feature-gate-interface` |
+| `loader-v3-interface` | `solana-loader-v3-interface` |
+| `stake-interface` | `solana-stake-interface` |
+| `system-interface` | `solana-system-interface` |
+| `vote-interface` | `solana-vote-interface` |
+
 ### Clients
 
 | Feature | Crate |
@@ -76,7 +134,9 @@ No features are enabled by default.
 |---|---|
 | `core` | all Core SDK features above |
 | `clients` | all Client features above |
-| `full` | `core` + `clients` + `program` |
+| `onchain` | all On-chain program crate features above |
+| `interfaces` | all Program interface features above |
+| `full` | `core` + `clients` + `onchain` + `interfaces` + `program` |
 
 ### Pass-through features
 
@@ -87,20 +147,24 @@ every core crate, while `serde` alone enables nothing.
 
 ```toml
 [dependencies]
-solana-awesome = { version = "0.1", features = ["pubkey", "transaction", "serde"] }
+solana-awesome = { version = "0.2", features = ["pubkey", "transaction", "serde"] }
 ```
 
 | Feature | Forwards to |
 |---|---|
-| `serde` | `account`, `commitment-config`, `compute-budget-interface`, `hash`, `instruction`, `message`, `pubkey`, `signature`, `system-interface`, `transaction` |
-| `borsh` | `compute-budget-interface`, `hash`, `instruction`, `program`, `pubkey` |
-| `wincode` | `account`, `hash`, `instruction`, `message`, `pubkey`, `signature`, `system-interface`, `transaction` |
-| `bytemuck` | `hash`, `pubkey`, `signature` |
+| `serde` | `account`, `address-lookup-table-interface`, `clock`, `commitment-config`, `compute-budget-interface`, `epoch-rewards`, `epoch-schedule`, `fee-calculator`, `feature-gate-interface`, `hash`, `instruction`, `instruction-error`, `last-restart-slot`, `loader-v3-interface`, `message`, `program-error`, `pubkey`, `rent`, `short-vec`, `signature`, `slot-hashes`, `slot-history`, `stake-interface`, `system-interface`, `sysvar`, `transaction`, `vote-interface` |
+| `borsh` | `compute-budget-interface`, `hash`, `instruction`, `program`, `program-error`, `pubkey`, `secp256k1-recover`, `stake-interface` |
+| `wincode` | `account`, `address-lookup-table-interface`, `clock`, `epoch-rewards`, `epoch-schedule`, `fee-calculator`, `hash`, `instruction`, `last-restart-slot`, `message`, `pubkey`, `rent`, `signature`, `slot-hashes`, `slot-history`, `stake-interface`, `system-interface`, `sysvar`, `transaction` |
+| `bytemuck` | `address-lookup-table-interface`, `hash`, `pubkey`, `signature`, `sysvar` |
 | `rand` | `pubkey`, `signature` |
-| `blake3` | `message`, `transaction` |
+| `blake3` | `blake3-hasher`, `message`, `transaction` |
 | `verify` | `signature`, `transaction` |
 | `curve25519` | `pubkey` |
-| `sha2` | `pubkey` |
+| `sha2` | `pubkey`, `sha256-hasher` |
+| `sha3` | `keccak-hasher` |
+| `num-traits` | `instruction-error` |
+| `nullable` | `program-option` |
+| `unstable-static-syscalls` | `define-syscall` |
 | `seed-derivable` | `keypair` |
 | `atomic` | `hash` |
 | `decode` | `hash` |
@@ -109,16 +173,27 @@ solana-awesome = { version = "0.1", features = ["pubkey", "transaction", "serde"
 | `syscalls` | `instruction` |
 | `agave-unstable-api` | all client crates |
 
+The hashers are the ones to watch: `sha256-hasher`, `keccak-hasher` and
+`blake3-hasher` compile without `sha2` / `sha3` / `blake3`, but off-chain
+their `hash`/`hashv` functions are only implemented when the matching
+pass-through is on (on-chain they use a syscall either way). Enable the pair
+if you hash outside a program.
+
 Not forwarded: `bincode` (legacy — upstream is migrating serialization to
 `wincode`, which is forwarded instead), `frozen-abi` and
 `dev-context-only-utils` (internal Agave tooling), `std`/`alloc` (on by
 default upstream), and `spinner` (on by default in `solana-rpc-client` /
 `solana-tpu-client`). Features that only exist in later minors than our
 minimum requirements (`solana-signature`'s `batch-verify` / `parallel`, added
-in 3.4; `solana-hash`'s `rand`, added in 4.5) are also not forwarded — they
-could break a build that unifies down to an earlier minor. If you need any of
-these, depend on the underlying crate directly with the feature enabled;
-cargo will unify it with the copy this crate uses.
+in 3.4; `solana-hash`'s `rand`, added in 4.5; `wincode` on `short-vec`,
+`feature-gate-interface`, `loader-v3-interface` and `vote-interface`) are
+also not forwarded — they could break a build that unifies down to an
+earlier minor. `codama` (IDL codegen for `solana-stake-interface`) is
+tooling, not a library concern, and `solana-instruction-error`'s `wincode`
+is held out on purpose: that crate moved to wincode 0.6 ahead of the rest of
+the tree, so forwarding it would resolve two incompatible wincode 0.x majors
+at once. If you need any of these, depend on the underlying crate directly
+with the feature enabled; cargo will unify it with the copy this crate uses.
 
 ## Version pinning notes
 
@@ -134,6 +209,15 @@ cargo will unify it with the copy this crate uses.
   group on the same minor when bumping, and check that
   `cargo tree -i wincode` shows a single version under the solana crates
   (the `wincode` dev-dependency must match it too).
+- The on-chain crates are *not* on their newest published minors. The Agave
+  client crates at `4.2` pin exact minors of the same primitives
+  (`solana-clock`, `solana-rent`, `solana-sysvar`, the `*-interface` crates,
+  ...), so each requirement here is the highest published floor that still
+  unifies with them — enabling `clients` and `onchain` together has to yield
+  one copy of each crate, or `solana_awesome::clock` and
+  `solana_awesome::sysvar` would disagree on the same types. These catch up
+  on their own once Agave does; `scripts/bump_requirements.py` raises them
+  in the daily job and reports the ones still held back.
 
 ## Adding a new crate
 
@@ -149,8 +233,36 @@ cargo will unify it with the copy this crate uses.
    pass-through table above. Only forward a feature if every version the
    requirement can resolve to has it — with major-only requirements that
    means it must exist in the earliest minor of that major.
-6. `cargo check --features full` and `cargo test --all-features` (the latter
-   also exercises every pass-through feature).
+6. `scripts/test-features.sh ci` — or `scripts/test-features.sh all` to also
+   check the new crate builds on its own, with no other feature enabled.
+
+## Testing
+
+`scripts/test-features.sh` builds and tests the crate across its feature
+matrix. Since this crate is only feature-gated re-exports, what breaks is a
+feature *combination* rather than a function, and each suite covers one of
+those failure modes:
+
+| Suite | What it runs |
+|---|---|
+| `ci` (default) | the gate `daily-deps.yml` runs: `--all-features`, then `full` alone, then no features at all |
+| `groups` | every group feature (`core`, `clients`, `onchain`, ...) on its own |
+| `leaves` | every single-crate feature on its own — catches a `#[cfg]` block reaching for a module some other feature happens to enable |
+| `passthrough` | `full` plus each pass-through (`serde`, `borsh`, `wincode`, ...) one at a time, since a weak forward means nothing without crates enabled |
+| `wincode` | one `wincode` major across the whole tree (see the version pinning notes above) |
+| `all` | all of the above |
+
+```sh
+scripts/test-features.sh              # the CI gate, seconds when warm
+scripts/test-features.sh all          # the whole matrix, a few minutes cold
+scripts/test-features.sh leaves -f    # stop at the first feature that fails alone
+scripts/test-features.sh groups -t    # cargo test, not just cargo check
+```
+
+The feature lists come from `cargo metadata`, so a crate added to `Cargo.toml`
+is covered the moment it lands — there is no list in the script to keep in
+sync. `--list` prints the classification, and failures are reported together
+at the end with a log path each.
 
 ## Keeping it current
 
@@ -187,7 +299,7 @@ Releases are manual:
 1. Make sure the version in `Cargo.toml` was bumped (patch for dependency
    requirement updates, minor for new features or a dependency major bump —
    the daily catch-up PRs already include the right bump).
-2. `cargo test --all-features`
+2. `scripts/test-features.sh all`
 3. `cargo publish --dry-run`
 4. `cargo publish`
 5. `git tag v<version> && git push --tags`

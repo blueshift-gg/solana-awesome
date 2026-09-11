@@ -5,10 +5,12 @@ For every `solana-*` dependency, tries to raise the version requirement to
 "<major>.<minor>" of the latest stable release on crates.io, so published
 solana-awesome versions track upstream (patch releases keep floating).
 Bumps are applied one at a time and kept only if the dependency tree still
-resolves (`cargo update --dry-run`) — a bump that conflicts with another
-crate's internal pins (e.g. clients lagging behind a core crate) is held
-back and reported instead of breaking the build. Requirements only move
-forward.
+resolves (`cargo update --dry-run`) *and* no crate ends up in the tree twice
+— a bump that conflicts with another crate's internal pins (e.g. clients
+lagging behind a core crate) is held back and reported instead of breaking
+the build, and so is one that merely resolves by adding a second copy of a
+crate, which would silently split a re-exported type in two. Requirements
+only move forward.
 
 If anything was bumped, the package version is bumped too: a patch bump
 for minor-level updates, a minor bump when any dependency changed major
@@ -68,6 +70,9 @@ def floor_of(req: str) -> tuple[int, int]:
 
 
 def resolves() -> bool:
+    # No `check=True`: a non-zero exit is the expected answer for a bump that
+    # conflicts with another crate's pins, and it has to come back as False so
+    # the caller can hold that bump back. Raising here aborts the whole run.
     return (
         subprocess.run(
             ["cargo", "update", "--dry-run", "--quiet"],
@@ -76,6 +81,37 @@ def resolves() -> bool:
         ).returncode
         == 0
     )
+
+
+def version_counts() -> dict[str, int]:
+    """How many distinct versions of each crate the full-feature tree holds.
+
+    Resolving is not enough on its own: a bump can resolve happily by adding a
+    *second* copy of a crate, and then `solana_awesome::instruction_error` and
+    the error type `solana_awesome::transaction` hands back are different
+    types. Same story one level down, where two `wincode` 0.x majors stop the
+    tree compiling at all. So a bump is only kept if no crate gains a copy.
+    """
+    proc = subprocess.run(
+        ["cargo", "metadata", "--format-version", "1", "--all-features", "-q"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return {}
+    counts: dict[str, int] = {}
+    for pkg in {(p["name"], p["version"]) for p in json.loads(proc.stdout)["packages"]}:
+        counts[pkg[0]] = counts.get(pkg[0], 0) + 1
+    return counts
+
+
+def accepted(baseline: dict[str, int]) -> bool:
+    """True if the tree resolves and no crate picked up an extra version."""
+    if not resolves():
+        return False
+    counts = version_counts()
+    return bool(counts) and all(n <= baseline.get(name, n) for name, n in counts.items())
 
 
 def deps_section(text: str) -> tuple[int, int]:
@@ -88,7 +124,11 @@ def bump_line(text: str, name: str, old_req: str, new_req: str) -> str:
     start, end = deps_section(text)
     old_line_prefix = f'{name} = {{ version = "{old_req}"'
     new_line_prefix = f'{name} = {{ version = "{new_req}"'
-    return text[:start] + text[start:end].replace(old_line_prefix, new_line_prefix, 1) + text[end:]
+    return (
+        text[:start]
+        + text[start:end].replace(old_line_prefix, new_line_prefix, 1)
+        + text[end:]
+    )
 
 
 def main() -> None:
@@ -114,17 +154,23 @@ def main() -> None:
     applied: list[tuple[str, str, str]] = []
     held_back: list[tuple[str, str, str, str]] = []
     major_changed = False
+    pkg = None
+    baseline = version_counts()
+    if not baseline:
+        sys.exit("error: `cargo metadata` failed on the unmodified manifest")
     try:
         # For each dep, keep the highest published floor that still resolves
-        # against everything already applied; record what stays out of reach.
+        # against everything already applied *without* splitting any crate
+        # across two versions; record what stays out of reach.
         for name, old_req, newer in candidates:
             chosen = None
             for floor in newer:
                 attempt = bump_line(text, name, old_req, f"{floor[0]}.{floor[1]}")
                 MANIFEST.write_text(attempt)
-                if resolves():
+                if accepted(baseline):
                     chosen = floor
                     text = attempt
+                    baseline = version_counts()
                     break
             latest_req = f"{newer[0][0]}.{newer[0][1]}"
             if chosen:
@@ -138,11 +184,18 @@ def main() -> None:
 
         if applied:
             pkg = PACKAGE_VERSION_RE.search(text)
+            if not pkg:
+                print(
+                    "warning: no package version found in Cargo.toml; not bumping package version"
+                )
+                return
             major, minor, patch = map(int, pkg.group("v").split("."))
             new_pkg = (
-                f"{major}.{minor + 1}.0" if major_changed else f"{major}.{minor}.{patch + 1}"
+                f"{major}.{minor + 1}.0"
+                if major_changed
+                else f"{major}.{minor}.{patch + 1}"
             )
-            text = text[: pkg.start()] + f'version = "{new_pkg}"' + text[pkg.end():]
+            text = text[: pkg.start()] + f'version = "{new_pkg}"' + text[pkg.end() :]
     finally:
         MANIFEST.write_text(original if dry_run else text)
 

@@ -107,7 +107,6 @@ solana-inline-spl
 solana-package-metadata
 solana-package-metadata-macro
 solana-sdk-macro
-solana-stable-layout             # "Internal use only"
 
 # --- Wasm/JS bindings, not for Rust consumers ---
 solana-sdk-wasm-js

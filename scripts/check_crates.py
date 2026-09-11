@@ -20,10 +20,11 @@ import json
 import re
 import sys
 import time
-import tomllib
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+import tomllib
 
 API = "https://crates.io/api/v1"
 HEADERS = {
@@ -125,22 +126,35 @@ def main() -> None:
     }
 
     print(f"## New crate candidates ({len(new)})\n")
-    print(f"Trusted owners (from `{TRUST_ANCHOR}`): {', '.join(f'`{n}`' for n in owner_names)}\n")
+    print(
+        f"Trusted owners (from `{TRUST_ANCHOR}`): {', '.join(f'`{n}`' for n in owner_names)}\n"
+    )
     if new:
         print("| Crate | Latest | Downloads | Description |")
         print("|---|---|---|---|")
         for name in sorted(new):
             c = new[name]
-            desc = (c.get("description") or "").replace("|", "\\|").replace("\n", " ").strip()
-            print(f"| `{name}` | `{c['max_stable_version']}` | {c['downloads']:,} | {desc} |")
+            desc = (
+                (c.get("description") or "")
+                .replace("|", "\\|")
+                .replace("\n", " ")
+                .strip()
+            )
+            print(
+                f"| `{name}` | `{c['max_stable_version']}` | {c['downloads']:,} | {desc} |"
+            )
     else:
-        print("None — every trusted solana-* crate is already re-exported, denylisted, or filtered.")
+        print(
+            "None — every trusted solana-* crate is already re-exported, denylisted, or filtered."
+        )
     print()
     included = len(deps.keys() & candidates.keys())
     denied = len(denylist & candidates.keys())
     filtered = len(candidates) - len(new) - included - denied
-    print(f"({len(candidates)} trusted crates total: {included} already included, "
-          f"{denied} denylisted, {filtered} filtered as stale/placeholder.)")
+    print(
+        f"({len(candidates)} trusted crates total: {included} already included, "
+        f"{denied} denylisted, {filtered} filtered as stale/placeholder.)"
+    )
 
 
 if __name__ == "__main__":
