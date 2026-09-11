@@ -1,6 +1,6 @@
 [package]
 name = "solana-awesome"
-version = "0.2.0"
+version = "0.1.0"
 edition = "2024"
 description = "A single crate that collects the Solana ecosystem crates and exposes each one behind a feature flag."
 license = "Apache-2.0"
