@@ -3,10 +3,10 @@ name: daily-deps
 # Every 24 hours: check crates.io for newer solana-* releases, raise the
 # Cargo.toml version requirements as far as the ecosystem's internal pins
 # allow (scripts/bump_requirements.py), bump the package version, validate
-# the full feature matrix, and open a PR with the diff — ready to merge and
-# `cargo publish` so solana-awesome always tracks the latest solana crates.
-# No standing `cargo update` churn: the lockfile only moves when the
-# requirements do.
+# the full feature matrix (scripts/test-features.sh all), and open a PR with
+# the diff — ready to merge and `cargo publish` so solana-awesome always
+# tracks the latest solana crates. No standing `cargo update` churn: the
+# lockfile only moves when the requirements do.
 
 on:
   schedule:
@@ -16,7 +16,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  issues: write
 
 concurrency:
   group: daily-deps
@@ -46,27 +45,10 @@ jobs:
 
       - name: Validate the full feature matrix
         if: steps.bump.outputs.changed == 'true'
-        run: |
-          # --all-features = full + every pass-through feature. Runs first and
-          # subsumes any `cargo check` of the same or smaller feature set.
-          cargo test --all-features
-          # Base features only: proves no test silently requires a pass-through.
-          cargo test --features full
-          # No features at all must still build.
-          cargo check --no-default-features
-
-      - name: Guard against a wincode version split
-        if: steps.bump.outputs.changed == 'true'
-        run: |
-          # Core and client crates must agree on one wincode 0.x (see README
-          # version pinning notes); a split fails the build in confusing ways,
-          # so surface it directly.
-          count=$(cargo tree --all-features --prefix none 2>/dev/null \
-            | grep -oE '^wincode v[0-9]+\.[0-9]+' | sort -u | tee /dev/stderr | wc -l)
-          if [ "$count" -gt 1 ]; then
-            echo "::error::dependency tree contains $count incompatible wincode versions"
-            exit 1
-          fi
+        # Every suite: the ci gate (--all-features, full, no features), each
+        # group / leaf / pass-through feature on its own, and the
+        # single-wincode tree check. Same script as ci.yml and local runs.
+        run: scripts/test-features.sh all
 
       - name: Dry-run publish
         if: steps.bump.outputs.changed == 'true'
@@ -80,10 +62,7 @@ jobs:
             echo
             echo "---"
             echo "Validated in [this run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}):"
-            echo '- `cargo test --all-features`'
-            echo '- `cargo test --features full`'
-            echo '- `cargo check --no-default-features`'
-            echo '- single `wincode` version across the tree'
+            echo '- `scripts/test-features.sh all` (ci gate, groups, leaves, pass-throughs, single `wincode` version)'
             echo '- `cargo publish --dry-run`'
             echo
             echo "Merge, then \`cargo publish\` + tag per the README release steps."
@@ -109,19 +88,3 @@ jobs:
             echo "## crates.io report (new crates need a manual /update-crates pass)"
             python3 scripts/check_crates.py
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: File an issue when the catch-up breaks
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          title="Daily catch-up failed"
-          url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          existing=$(gh issue list --state open --search "in:title \"$title\"" \
-            --json number --jq '.[0].number')
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "Still failing: $url"
-          else
-            gh issue create --title "$title" \
-              --body "Bumping to the latest solana crates broke the build or tests. See $url"
-          fi

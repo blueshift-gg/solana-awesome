@@ -8,7 +8,7 @@
 # dependency bump that splits the tree across two incompatible wincode majors.
 # Each suite below covers one of those failure modes.
 #
-#   ci           the gate daily-deps.yml runs: --all-features, full, no features
+#   ci           the core gate: --all-features, full, no features
 #   groups       every group feature (core, clients, onchain, ...) on its own
 #   leaves       every single-crate feature on its own — the slow, thorough one
 #   passthrough  full + each pass-through (serde, borsh, wincode, ...) on its own
@@ -150,8 +150,8 @@ suite_list() {
     done
 }
 
-# The gate daily-deps.yml runs. --all-features subsumes any smaller check, so it
-# goes first; `full` alone then proves no test silently needs a pass-through.
+# The core gate. --all-features subsumes any smaller check, so it goes first;
+# `full` alone then proves no test silently needs a pass-through.
 suite_ci() {
     heading "ci gate"
     run_step "cargo test --all-features"        cargo test "${JOBS[@]}" --all-features

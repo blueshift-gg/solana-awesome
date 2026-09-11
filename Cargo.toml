@@ -2,11 +2,11 @@
 name = "solana-awesome"
 version = "0.1.0"
 edition = "2024"
-description = "A single crate that collects the Solana ecosystem crates and exposes each one behind a feature flag."
+description = "An awesome collective of major Solana libraries — core sdk, programs, interfaces, clients, crypto etc with a single dependency and feature flag for each."
 license = "Apache-2.0"
-repository = "https://github.com/Nagaprasadvr/solana-awesome"
+repository = "https://github.com/blueshift-gg/solana-awesome"
 keywords = ["solana", "sdk", "blockchain"]
-categories = ["cryptography::cryptocurrencies", "api-bindings"]
+categories = ["blockchain", "cryptography", "network-programming"]
 exclude = ["scripts/", ".claude/"]
 
 # docs.rs builds every feature so the flag badges on each re-export are right.

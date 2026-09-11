@@ -1,0 +1,67 @@
+name: ci
+
+# Every pull request (and every push to master) runs the full
+# scripts/test-features.sh matrix, one suite per job so they run in parallel
+# and a failure names the suite that broke:
+#
+#   ci           cargo test --all-features, --features full, and no features
+#   groups       every group feature (core, clients, onchain, ...) on its own
+#   passthrough  full + each pass-through (serde, borsh, wincode, ...) alone
+#   leaves       every single-crate feature on its own
+#   wincode      one wincode major across the whole dependency tree
+#
+# The suites read the feature list from `cargo metadata`, so a crate added in
+# the PR is covered without touching this file.
+#
+# daily-deps.yml PRs are opened with the default GITHUB_TOKEN, which does not
+# fire `pull_request`; that job validates its own bump before opening the PR,
+# so nothing runs twice.
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run per PR / branch: a newer push cancels the run it supersedes.
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-features:
+    name: test-features (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [ci, groups, passthrough, leaves, wincode]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # Share one cache with daily-deps: same lockfile, same targets.
+          shared-key: daily-deps
+          save-if: ${{ github.ref == 'refs/heads/master' }}
+
+      - name: scripts/test-features.sh ${{ matrix.suite }}
+        env:
+          # The script keeps per-step cargo logs under $TMPDIR; point it at
+          # the runner temp dir so the failure artifact below can find them.
+          TMPDIR: ${{ runner.temp }}
+        run: scripts/test-features.sh --fail-fast ${{ matrix.suite }}
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-features-${{ matrix.suite }}-logs
+          path: ${{ runner.temp }}/solana-awesome-matrix.*/*.log
+          if-no-files-found: ignore
+

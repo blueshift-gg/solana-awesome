@@ -9,7 +9,7 @@ and turn on only what you need.
 
 ```toml
 [dependencies]
-solana-awesome = { version = "0.2", features = ["pubkey", "keypair", "signer", "rpc-client"] }
+solana-awesome = { version = "0.1", features = ["pubkey", "keypair", "signer", "rpc-client"] }
 ```
 
 ```rust
@@ -147,7 +147,7 @@ every core crate, while `serde` alone enables nothing.
 
 ```toml
 [dependencies]
-solana-awesome = { version = "0.2", features = ["pubkey", "transaction", "serde"] }
+solana-awesome = { version = "0.1", features = ["pubkey", "transaction", "serde"] }
 ```
 
 | Feature | Forwards to |
@@ -245,7 +245,7 @@ those failure modes:
 
 | Suite | What it runs |
 |---|---|
-| `ci` (default) | the gate `daily-deps.yml` runs: `--all-features`, then `full` alone, then no features at all |
+| `ci` (default) | the core gate: `--all-features`, then `full` alone, then no features at all |
 | `groups` | every group feature (`core`, `clients`, `onchain`, ...) on its own |
 | `leaves` | every single-crate feature on its own — catches a `#[cfg]` block reaching for a module some other feature happens to enable |
 | `passthrough` | `full` plus each pass-through (`serde`, `borsh`, `wincode`, ...) one at a time, since a weak forward means nothing without crates enabled |
@@ -263,6 +263,12 @@ The feature lists come from `cargo metadata`, so a crate added to `Cargo.toml`
 is covered the moment it lands — there is no list in the script to keep in
 sync. `--list` prints the classification, and failures are reported together
 at the end with a log path each.
+
+Every pull request (and every push to `master`) runs the whole matrix in CI
+(`.github/workflows/ci.yml`): one job per suite, in parallel, so a red check
+names the suite that broke and the failing step's cargo log is attached to the
+run as an artifact. The daily catch-up PRs (see below) are validated by the
+`daily-deps` job itself before they are opened, so nothing runs twice.
 
 ## Keeping it current
 
@@ -284,13 +290,13 @@ manually from the Actions tab) keeps the crate caught up with upstream:
 highest published `major.minor` that still resolves against the rest of the
 tree (bumps blocked by other crates' internal pins are held back and listed),
 bumps the package version (patch, or minor when a dependency changed major),
-validates the full feature matrix (`--all-features`, `full`-only, and
-no-features builds, a single-wincode tree check, and `cargo publish
---dry-run`), and opens a PR with the diff. Merging it and running the release
-steps below publishes a solana-awesome that tracks the latest solana crates.
-If the bump breaks the build or tests, the job files/updates an issue
-instead. New crates still go through `/update-crates`; the job prints the
-`check_crates.py` report in its run summary as a reminder.
+validates the full feature matrix (`scripts/test-features.sh all`, then
+`cargo publish --dry-run`), and opens a PR with the diff. Merging it and
+running the release steps below publishes a solana-awesome that tracks the
+latest solana crates.
+If the bump breaks the build or tests, no PR is opened and the run shows red
+in the Actions tab. New crates still go through `/update-crates`; the job
+prints the `check_crates.py` report in its run summary as a reminder.
 
 ## Release
 
@@ -303,6 +309,10 @@ Releases are manual:
 3. `cargo publish --dry-run`
 4. `cargo publish`
 5. `git tag v<version> && git push --tags`
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE).
 
 [`solana-pubkey`]: https://crates.io/crates/solana-pubkey
 [`solana-rpc-client`]: https://crates.io/crates/solana-rpc-client

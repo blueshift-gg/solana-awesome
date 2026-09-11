@@ -5,7 +5,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! solana-awesome = { version = "0.2", features = ["pubkey", "rpc-client"] }
+//! solana-awesome = { version = "0.1", features = ["pubkey", "rpc-client"] }
 //! ```
 //!
 //! Or grab a group: `core` (all SDK primitives), `clients` (all client
@@ -22,7 +22,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! solana-awesome = { version = "0.2", features = ["core", "serde"] }
+//! solana-awesome = { version = "0.1", features = ["core", "serde"] }
 //! ```
 //!
 //! ```ignore
