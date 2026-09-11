@@ -94,5 +94,7 @@ Bump `package.version` in `Cargo.toml`: **patch** if only dependency
 requirements changed, **minor** if features were added. Summarize what was
 bumped, added, and denylisted.
 
-**Do not publish or push.** Releases are manual — point the user at the
-Release section in `README.md` when the tree is ready.
+**Do not publish or push.** Releases are tag-triggered — point the user at the
+Release section in `README.md`, where tagging the merge commit
+(`git tag v<version> && git push origin v<version>`) runs the validation and
+publish workflow.

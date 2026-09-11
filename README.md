@@ -297,15 +297,55 @@ prints the `check_crates.py` report in its run summary as a reminder.
 
 ## Release
 
-Releases are manual:
+Publishing is automated by `.github/workflows/release.yml`, which is triggered
+by a version tag:
 
-1. Make sure the version in `Cargo.toml` was bumped (patch for dependency
+1. Make sure `package.version` in `Cargo.toml` was bumped (patch for dependency
    requirement updates, minor for new features or a dependency major bump —
-   the daily catch-up PRs already include the right bump).
-2. `scripts/test-features.sh all`
-3. `cargo publish --dry-run`
-4. `cargo publish`
-5. `git tag v<version> && git push --tags`
+   the daily catch-up PRs already include the right bump), and merge it.
+2. Tag the merged commit with an annotated tag and push it. The tag must equal
+   the manifest version — the workflow refuses to publish a mismatch:
+
+   ```sh
+   # e.g. v0.1.0 for version = "0.1.0"
+   git tag -a v<version> -m "Release v<version>"
+   git push origin v<version>
+   ```
+
+The workflow runs the whole feature matrix (`scripts/test-features.sh all`,
+plus `cargo publish --dry-run`) and only then calls the shared
+[`release-crates`](https://github.com/blueshift-gg/github-actions) workflow,
+which re-verifies the tag against `Cargo.toml`, publishes the crate, and opens a
+draft GitHub release with generated notes. A failure in the matrix means
+nothing is published. If a release is interrupted part-way (network, crates.io),
+re-run the workflow from the Actions tab to publish whatever is still missing.
+
+There is no `CARGO_REGISTRY_TOKEN` to manage: the workflow authenticates with
+[crates.io trusted publishing](https://crates.io/docs/trusted-publishing),
+exchanging a short-lived GitHub OIDC token for a 30-minute crates.io token.
+
+### One-time setup
+
+Configure the crate's trusted publisher under its crates.io settings
+(*Settings* → *Trusted Publishing* → *Add* → *GitHub*):
+
+| Field | Value |
+|---|---|
+| Repository owner | `blueshift-gg` |
+| Repository name | `solana-awesome` |
+| Workflow filename | `release.yml` |
+| Environment | `release` |
+
+The workflow filename is the **caller**, `.github/workflows/release.yml` — not
+`release-crates.yml`. crates.io matches the OIDC `workflow_ref` claim, and
+GitHub documents that claim as describing the *calling* workflow even when the
+job itself comes from a reusable workflow, so the shared workflow's filename
+never appears in the token. Leaving *Environment* empty also works (a config
+with no environment accepts any token), but naming it matches the workflow.
+
+Then create the `release` environment under the repository's *Settings* →
+*Environments* and add required reviewers if a human should approve each
+release before it is uploaded.
 
 ## License
 

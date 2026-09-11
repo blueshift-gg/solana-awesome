@@ -4,7 +4,8 @@ name: daily-deps
 # Cargo.toml version requirements as far as the ecosystem's internal pins
 # allow (scripts/bump_requirements.py), bump the package version, validate
 # the full feature matrix (scripts/test-features.sh all), and open a PR with
-# the diff — ready to merge and `cargo publish` so solana-awesome always
+# the diff — ready to merge and tag (pushing the tag runs
+# .github/workflows/release.yml, which publishes) so solana-awesome always
 # tracks the latest solana crates. No standing `cargo update` churn: the
 # lockfile only moves when the requirements do.
 
@@ -57,6 +58,7 @@ jobs:
       - name: Prepare PR body
         if: steps.bump.outputs.changed == 'true'
         run: |
+          version=$(python3 -c "import tomllib; print(tomllib.load(open('Cargo.toml','rb'))['package']['version'])")
           {
             cat bump-report.md
             echo
@@ -65,7 +67,13 @@ jobs:
             echo '- `scripts/test-features.sh all` (ci gate, groups, leaves, pass-throughs, single `wincode` version)'
             echo '- `cargo publish --dry-run`'
             echo
-            echo "Merge, then \`cargo publish\` + tag per the README release steps."
+            echo "Merge, then tag the merge commit to publish (the tag must match \`package.version\`):"
+            echo
+            echo '```sh'
+            echo "git tag -a v${version} -m \"Release v${version}\" && git push origin v${version}"
+            echo '```'
+            echo
+            echo "See README → Release; \`.github/workflows/release.yml\` validates and publishes."
           } > pr-body.md
 
       - name: Open a PR with the catch-up diff

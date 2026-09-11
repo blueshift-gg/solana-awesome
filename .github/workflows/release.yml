@@ -1,0 +1,66 @@
+name: Release
+
+# Tag-triggered publish to crates.io.
+#
+# The publish half is the shared Blueshift reusable workflow
+# (blueshift-gg/github-actions). It re-checks that the tag matches
+# `package.version`, publishes with `cargo release` over crates.io trusted
+# publishing (OIDC — there is no CARGO_REGISTRY_TOKEN to rotate), and opens a
+# draft GitHub release.
+#
+# This file only adds the gate in front of it: a crates.io release is
+# effectively irreversible (yank-only), so the full feature matrix has to pass
+# before the shared workflow runs. The `v<version>` tag must equal
+# `package.version` in Cargo.toml and be pushed on a commit that contains this
+# file. See README -> Release.
+
+on:
+  push:
+    tags: ["v*"]
+
+run-name: "Release ${{ github.ref_name }}"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release
+
+      - name: Build and test the full feature matrix
+        # ci + groups + passthrough + leaves + the single-wincode check: the
+        # same gate the README release steps and daily-deps rely on, run here
+        # because nothing after this point is reversible.
+        run: scripts/test-features.sh all
+
+      - name: Dry-run publish
+        run: cargo publish --dry-run
+
+  crates:
+    name: Publish crates
+    needs: validate
+    # The caller grants what the reusable workflow's job needs; it cannot grant
+    # more than this. `id-token: write` is what lets crates.io verify the
+    # workflow by OIDC instead of a stored token.
+    permissions:
+      contents: write
+      id-token: write
+    uses: blueshift-gg/github-actions/.github/workflows/release-crates.yml@master
+    with:
+      tag: ${{ github.ref_name }}
+      # An approval gate: create the `release` environment with required
+      # reviewers. crates.io's trusted-publisher config for this crate must use
+      # either the same environment name or none (see README -> Release).
+      environment: release
+      timeout-minutes: 15
+    secrets: inherit
