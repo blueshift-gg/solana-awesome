@@ -1,9 +1,6 @@
 # solana-awesome
 
-A single crate that collects the Solana ecosystem crates and exposes each one
-behind a feature flag. Instead of managing a dozen `solana-*` dependencies
-(and their version compatibility) in every project, depend on this one crate
-and turn on only what you need.
+An awesome collective of major `Solana` libraries — core sdk, programs, interfaces, clients, crypto etc
 
 ## Usage
 
