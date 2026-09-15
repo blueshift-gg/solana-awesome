@@ -320,33 +320,6 @@ draft GitHub release with generated notes. A failure in the matrix means
 nothing is published. If a release is interrupted part-way (network, crates.io),
 re-run the workflow from the Actions tab to publish whatever is still missing.
 
-There is no `CARGO_REGISTRY_TOKEN` to manage: the workflow authenticates with
-[crates.io trusted publishing](https://crates.io/docs/trusted-publishing),
-exchanging a short-lived GitHub OIDC token for a 30-minute crates.io token.
-
-### One-time setup
-
-Configure the crate's trusted publisher under its crates.io settings
-(*Settings* → *Trusted Publishing* → *Add* → *GitHub*):
-
-| Field | Value |
-|---|---|
-| Repository owner | `blueshift-gg` |
-| Repository name | `solana-awesome` |
-| Workflow filename | `release.yml` |
-| Environment | `release` |
-
-The workflow filename is the **caller**, `.github/workflows/release.yml` — not
-`release-crates.yml`. crates.io matches the OIDC `workflow_ref` claim, and
-GitHub documents that claim as describing the *calling* workflow even when the
-job itself comes from a reusable workflow, so the shared workflow's filename
-never appears in the token. Leaving *Environment* empty also works (a config
-with no environment accepts any token), but naming it matches the workflow.
-
-Then create the `release` environment under the repository's *Settings* →
-*Environments* and add required reviewers if a human should approve each
-release before it is uploaded.
-
 ## License
 
 Licensed under the [Apache License, Version 2.0](LICENSE).
