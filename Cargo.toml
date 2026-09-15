@@ -6,7 +6,7 @@ description = "An awesome collective of major Solana libraries — core sdk, pro
 license = "Apache-2.0"
 repository = "https://github.com/blueshift-gg/solana-awesome"
 keywords = ["solana", "sdk", "blockchain"]
-categories = ["blockchain", "cryptography", "network-programming"]
+categories = ["cryptography::cryptocurrencies", "cryptography", "network-programming"]
 exclude = ["scripts/", ".claude/"]
 
 # docs.rs builds every feature so the flag badges on each re-export are right.
