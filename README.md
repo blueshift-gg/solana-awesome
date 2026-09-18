@@ -142,6 +142,13 @@ These forward a feature of the same name to the underlying crates. They are
 pulls a crate in by itself. So `features = ["core", "serde"]` enables serde on
 every core crate, while `serde` alone enables nothing.
 
+One caveat, on the lockfile rather than the build: cargo still *resolves* every
+crate a weak forward names into `Cargo.lock`, even when its feature is off
+([rust-lang/cargo#10801](https://github.com/rust-lang/cargo/issues/10801)).
+Nothing gets compiled, but the version requirements of the whole optional set
+have to be satisfiable next to whatever else your lockfile pins. The version
+pinning notes below explain how the requirements here are kept that way.
+
 ```toml
 [dependencies]
 solana-awesome = { version = "0.1", features = ["pubkey", "transaction", "serde"] }
@@ -206,6 +213,16 @@ with the feature enabled; cargo will unify it with the copy this crate uses.
   group on the same minor when bumping, and check that
   `cargo tree -i wincode` shows a single version under the solana crates
   (the `wincode` dev-dependency must match it too).
+- Every requirement must also fit *every* version of its siblings this
+  manifest admits, not just the latest. Because of the lockfile caveat under
+  pass-through features, a downstream holding an older release line — say
+  `solana-transaction` 4.1.x via `solana-transaction-status = "=4.2.2"`, which
+  wants `solana-instruction-error >=2.4, <2.5` — resolves this crate's
+  optional set too, and cargo cannot hold two copies of one major. So
+  `solana-instruction-error` sits at `"2.4"` although `2.5` is published.
+  `scripts/bump_requirements.py` holds back any bump that would break this
+  (it reads each sibling version's requirements from crates.io) and reports
+  why; `scripts/bump_requirements.py --audit` checks the manifest as it is.
 - The on-chain crates are *not* on their newest published minors. The Agave
   client crates at `4.2` pin exact minors of the same primitives
   (`solana-clock`, `solana-rent`, `solana-sysvar`, the `*-interface` crates,
@@ -285,7 +302,9 @@ A daily GitHub Actions job (`.github/workflows/daily-deps.yml`, also runnable
 manually from the Actions tab) keeps the crate caught up with upstream:
 `scripts/bump_requirements.py` raises each `solana-*` requirement to the
 highest published `major.minor` that still resolves against the rest of the
-tree (bumps blocked by other crates' internal pins are held back and listed),
+tree and stays reachable from every sibling version the manifest admits
+(bumps blocked by other crates' internal pins are held back and listed with
+the pin that blocks them),
 bumps the package version (patch, or minor when a dependency changed major),
 validates the full feature matrix (`scripts/test-features.sh all`, then
 `cargo publish --dry-run`), and opens a PR with the diff. Merging it and

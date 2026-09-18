@@ -1,6 +1,6 @@
 [package]
 name = "solana-awesome"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "An awesome collective of major Solana libraries — core sdk, programs, interfaces, clients, crypto etc with a single dependency and feature flag for each."
 license = "Apache-2.0"
@@ -48,7 +48,15 @@ solana-epoch-rewards = { version = "3.1", optional = true, features = ["sysvar"]
 solana-epoch-schedule = { version = "3.2", optional = true, features = ["sysvar"] }
 solana-epoch-stake = { version = "3.0", optional = true }
 solana-fee-calculator = { version = "3.2", optional = true }
-solana-instruction-error = { version = "2.5", optional = true }
+# Held at 2.4, not the published 2.5: `solana-transaction` 4.1.x and
+# `solana-instruction` 3.4.x pin `>=2.4, <2.5`, and a downstream on that line
+# (anything holding the Agave 4.2.x release, e.g. via `solana-transaction-status
+# = "=4.2.2"`) must still be able to resolve this manifest. Weak pass-throughs
+# (`solana-instruction-error?/serde`) are enough to put this crate in their
+# lockfile even when the `instruction-error` feature is off
+# (rust-lang/cargo#10801), so the floor has to fit every sibling version, not
+# only the latest. `scripts/bump_requirements.py` enforces this on bumps.
+solana-instruction-error = { version = "2.4", optional = true }
 solana-instructions-sysvar = { version = "4.0", optional = true }
 solana-keccak-hasher = { version = "3.1", optional = true }
 solana-last-restart-slot = { version = "3.1", optional = true, features = ["sysvar"] }
